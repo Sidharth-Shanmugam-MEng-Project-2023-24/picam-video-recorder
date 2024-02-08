@@ -1,2 +1,2 @@
 # webcam-video-recorder
-Python script to record video from a stream and store as file using OpenCV
+Python script to record video from a Raspberry Camera stream and store it as a file using OpenCV
