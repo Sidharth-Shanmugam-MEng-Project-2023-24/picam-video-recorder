@@ -1,6 +1,6 @@
 import cv2 as cv
 from picamera2 import Picamera2
-from picamera2.encoders import Encoder
+from picamera2.encoders import JpegEncoder
 from datetime import datetime
 
 REC_HEIGHT = 840
@@ -12,14 +12,13 @@ cv.namedWindow("PiCam Feed")
 
 recording = False
 
-encoder = Encoder()
-
 config = picam.create_video_configuration(
     main={"size": (REC_HEIGHT, REC_WIDTH)},
-    raw={},
-    encode="raw"
 )
 picam.configure(config)
+
+encoder = JpegEncoder(q=100)
+
 picam.start()
 
 while True:
@@ -30,9 +29,19 @@ while True:
 
     if key == ord('e'):
         if recording:
-            picam.stop_recording()
-        picam.stop()
-        break
+            frame_overlay = cv.putText(
+                img=frame_overlay,
+                text="     CANNOT EXIT: REC IN PROGRESS!",
+                org=(10, 50),
+                fontFace=cv.FONT_HERSHEY_SIMPLEX,
+                fontScale=1,
+                color=(0,0,255),
+                thickness=2,
+                lineType=cv.LINE_AA
+            )
+        else:
+            picam.stop()
+            break
 
     if key == ord('r'):
         if recording:
@@ -40,11 +49,11 @@ while True:
         else:
             recording = True
             recording_start = datetime.now().strftime("%m-%d-%Y-%H-%M-%S")
-            filename = "recording_" + recording_start + ".raw"
+            filename = "recording_" + recording_start + ".mjpg"
             print("Started recording to:", filename)
             picam.start_recording(
                 encoder=encoder,
-                output=filename
+                output=filename,
             )
 
     if recording:
