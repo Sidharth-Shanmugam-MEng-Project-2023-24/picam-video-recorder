@@ -1,19 +1,23 @@
 import cv2 as cv
 from picamera2 import Picamera2
-from picamera2.encoders import H264Encoder, Quality
+from picamera2.encoders import Encoder
 from datetime import datetime
 
 REC_HEIGHT = 840
 REC_WIDTH = 640
-REC_FPS = 20
+# REC_FPS = 20
 
 picam = Picamera2()
 cv.namedWindow("PiCam Feed")
 
 recording = False
 
+encoder = Encoder()
+
 config = picam.create_video_configuration(
-    main={"size": (REC_HEIGHT, REC_WIDTH)}
+    main={"size": (REC_HEIGHT, REC_WIDTH)},
+    raw={},
+    encode="raw"
 )
 picam.configure(config)
 picam.start()
@@ -36,12 +40,11 @@ while True:
         else:
             recording = True
             recording_start = datetime.now().strftime("%m-%d-%Y-%H-%M-%S")
-            filename = "recording_" + recording_start + ".h264"
+            filename = "recording_" + recording_start + ".raw"
             print("Started recording to:", filename)
             picam.start_recording(
-                encoder=H264Encoder(),
-                output=filename,
-                quality=Quality.VERY_HIGH
+                encoder=encoder,
+                output=filename
             )
 
     if recording:
