@@ -1,5 +1,5 @@
 # webcam-video-recorder
-Python script to record video from a Raspberry Pi Camera stream to a file, simultaneously driving a projector light source using the Framebuffer
+Python script to record video from a Raspberry Pi Camera stream to a file, simultaneously driving a projector light source using the Framebuffer.
 
 The aim of this software is to record test footage of bubbles from the underwater testing facility at the [Institute for Safe Autonomy](https://www.york.ac.uk/safe-autonomy/). The software drives a DLP projector, connected via HDMI and using the Framebuffer to eliminate the need for a desktop environment, to power a toggle-able light source. Footage is recorded from a Raspberry Pi Global Shutter camera.
 
