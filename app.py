@@ -4,10 +4,9 @@ from picamera2 import Picamera2
 from picamera2.encoders import JpegEncoder
 from datetime import datetime
 
-# Width, height and FPS of the recording
+# Width and height of the recording
 REC_WIDTH = 840
 REC_HEIGHT = 640
-# REC_FPS = 20
 
 # Width, height of the framebuffer
 FB_WIDTH = 1920
