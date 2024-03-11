@@ -10,8 +10,9 @@ REC_HEIGHT = 640
 # REC_FPS = 20
 
 # Width, height of the framebuffer
-LIGHT_WIDTH = 320
-LIGHT_HEIGHT = 4315
+FB_WIDTH = 1920
+FB_HEIGHT = 1080
+FB_DEPTH = 16
 
 # initialise picam2
 picam = Picamera2()
@@ -29,10 +30,21 @@ cv.namedWindow("PiCam Feed")
 recording = False
 light = False
 
+# initialise framebuffer outputs
+project_off = np.full(
+    (FB_HEIGHT, FB_WIDTH),  # fill into array of this size
+    0,                      # fill array with this value (black/off = 0)
+    dtype=np.uint16
+).reshape(-1)               # flatten to 1d array for writing to framebuffer
+project_on = np.full(
+    (FB_HEIGHT, FB_WIDTH),  # fill into array of this size
+    (2 ** FB_DEPTH - 1),    # Maximum value for given colour depth (white)
+    dtype=np.uint16
+).reshape(-1)               # flatten to 1d array for writing to framebuffer
+
 # project zeros (black) to the framebuffer to reset output
-project = np.zeros((LIGHT_WIDTH, LIGHT_HEIGHT, 3), dtype=np.uint8)
 with open('/dev/fb0', 'wb') as buf:
-    buf.write(project.tobytes())
+    buf.write(project_off.tobytes())
 
 # initialise JPEG encoder with quality = 100
 encoder = JpegEncoder(q=100)
@@ -89,19 +101,13 @@ while True:
         if light:
             # turn off light if already on
             light = False
-            # generate array of zeros
-            project = np.zeros((LIGHT_WIDTH, LIGHT_HEIGHT, 3), dtype=np.uint8)
-            # write this array of zeros to the framebuffer
             with open('/dev/fb0', 'wb') as buf:
-                buf.write(project.tobytes())
+                buf.write(project_off.tobytes())
         else:
             # turn on light if already off
             light = True
-            # generate array of 255's (white)
-            project = np.ones((LIGHT_WIDTH, LIGHT_HEIGHT, 3), dtype=np.uint8) * 255
-            # write this frame to the framebuffer
             with open('/dev/fb0', 'wb') as buf:
-                buf.write(project.tobytes())
+                buf.write(project_on.tobytes())
 
     # add text overlay to gui frame if recording
     if recording:
@@ -123,6 +129,5 @@ while True:
 cv.destroyAllWindows()
 
 # when exiting, reset framebuffer with zero array
-project = np.zeros((LIGHT_WIDTH, LIGHT_HEIGHT, 3), dtype=np.uint8)
 with open('/dev/fb0', 'wb') as buf:
-    buf.write(project.tobytes())
+    buf.write(project_off.tobytes())
