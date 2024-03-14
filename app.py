@@ -84,6 +84,12 @@ while True:
     if key == ord('r'):
         if recording:
             recording = False
+            picam.stop_recording()  # stop the recording
+            recording_stop = datetime.now().strftime("%m-%d-%Y-%H-%M-%S")
+            print("Recording stopped:", recording_stop)
+            # picam needs to be restarted because stop_recording completely stops the preview
+            picam.stop()
+            picam.start()
         else:
             recording = True
             recording_start = datetime.now().strftime("%m-%d-%Y-%H-%M-%S")
