@@ -40,3 +40,5 @@ try:
         raw_data = file.read()
 except FileNotFoundError:
     print("[ERR] Raw data file not found!")
+
+
