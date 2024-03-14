@@ -1,8 +1,9 @@
 import cv2 as cv
 import numpy as np
 from picamera2 import Picamera2
-from picamera2.encoders import JpegEncoder
+from picamera2.encoders import Encoder, JpegEncoder
 from datetime import datetime
+from pprint import *
 
 # Width and height of the recording
 REC_WIDTH = 840
@@ -16,11 +17,27 @@ FB_DEPTH = 16
 # initialise picam2
 picam = Picamera2()
 
+
+pprint(picam.sensor_modes)
+
 # configure picam2
-config = picam.create_video_configuration(
-    main={"size": (REC_WIDTH, REC_HEIGHT)},
-)
-picam.configure(config)
+picam.video_configuration.enable_raw()
+picam.video_configuration.raw.size = (REC_WIDTH, REC_HEIGHT)
+picam.video_configuration.raw.format = 'SBGGR10'
+picam.video_configuration.size = (REC_WIDTH, REC_HEIGHT)
+picam.video_configuration.align()
+picam.video_configuration.encode = 'raw'
+pprint(picam.video_configuration)
+picam.configure("video")
+pprint(picam.video_configuration)
+
+# print("\n\n\n\n")
+# print(picam.sensor_modes)
+# print("\n")
+# print("main camera config: " + str(picam.video_configuration.main))
+# print("\n")
+# print("raw camera config: " + str(picam.video_configuration.raw))
+# print("\n\n\n\n")
 
 # window to display recording feed (view from X11)
 cv.namedWindow("PiCam Feed")
@@ -46,7 +63,8 @@ with open('/dev/fb0', 'wb') as buf:
     buf.write(project_off.tobytes())
 
 # initialise JPEG encoder with quality = 100
-encoder = JpegEncoder(q=100)
+# encoder = JpegEncoder(q=100)
+encoder = Encoder()
 
 # start the picam
 picam.start()
@@ -84,10 +102,19 @@ while True:
     if key == ord('r'):
         if recording:
             recording = False
+            picam.stop_recording()
+            recording_end = datetime.now()
+            recording_end_str = recording_end.strftime("%m-%d-%Y-%H-%M-%S")
+            recording_duration = recording_end - recording_start
+            print("Recording finished, duration:", recording_duration)
+            picam.stop()
+            picam.start()
         else:
             recording = True
-            recording_start = datetime.now().strftime("%m-%d-%Y-%H-%M-%S")
-            filename = "recording_" + recording_start + ".mjpg"
+            recording_start = datetime.now()
+            recording_start_str = recording_start.strftime("%m-%d-%Y-%H-%M-%S")
+            # filename = "recording_" + recording_start + ".mjpg"
+            filename = "recording_" + recording_start_str + ".raw"
             print("Started recording to:", filename)
             # use picam recording function with the right encoder
             picam.start_recording(
