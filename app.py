@@ -60,4 +60,5 @@ if __name__ == "__main__":
             # Exit
             break
     
+    # Exit from the script
     exit()

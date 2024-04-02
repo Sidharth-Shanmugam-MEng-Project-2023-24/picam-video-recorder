@@ -1,11 +1,11 @@
 # picam-video-recorder
 Python script to record video from a Raspberry Pi Camera stream to a file, simultaneously driving a projector light source using the Framebuffer
 
-The aim of this software is to record test footage of bubbles from the underwater testing facility at the [Institute for Safe Autonomy](https://www.york.ac.uk/safe-autonomy/). The software drives a DLP projector, connected via HDMI and using the Framebuffer to eliminate the need for a desktop environment, to power a toggle-able light source. Footage is recorded from a Raspberry Pi Global Shutter camera.
+This software aims to record test footage of bubbles from the underwater testing facility at the [Institute for Safe Autonomy](https://www.york.ac.uk/safe-autonomy/) using a Raspberry Pi 4/5 and a Pi Global Shutter Camera. The software also drives a DLP projector, connected via HDMI and using the Framebuffer to eliminate the need for a desktop environment, to power a toggle-able light source.
 
 ## Prerequisites
-1. Connect GS camera to Pi using the MIPI interface.
-2. Connect DLP projector to either of the Pi's HDMI ports.
+1. Connect the GS camera to Pi using the MIPI interface.
+2. Connect the DLP projector to Pi's HDMI ports.
 3. Connect Pi to Desktop/Laptop via Ethernet.
 4. SSH into Pi with X11 forwarding (e.g., `ssh -X sid@sidpi4.local`).
 
@@ -31,10 +31,10 @@ Since the 'Image Signal Processor' efficiently processes this 'raw' stream into 
 ### Parameters 1: Recording resolution
 The resolution and framerate to record with is controlled by the `REC_WIDTH`, `REC_HEIGHT`, and `REC_FPS` constants. By default: `REC_WIDTH=728`, `REC_HEIGHT=544`, and `REC_FPS=30` which is half of the full resolution and half of the max framerate of the sensor.
 
-The values stored in this constant is passed to Picamera2's `create_video_configuration()` and `configure()` functions, which initialises the GS camera for video recording.
+The values stored in this constant are passed to Picamera2's `create_video_configuration()` and `configure()` functions, which initialises the GS camera for video recording.
 
 ### Parameters 2: Framebuffer size
-Since different HDMI outputs can use different resolutions, use the `fbset -fb /dev/fb0` command to retrive the Framebuffer parameters, you should see something like this as an output:
+Since different HDMI outputs can use different resolutions, use the `fbset -fb /dev/fb0` command to retrieve the Framebuffer parameters, you should see something like this as an output:
 
 ```
 sid@sidpi4:~ $ fbset -fb /dev/fb0
@@ -46,7 +46,7 @@ mode "1920x1080"
 endmode
 ```
 
-Ensure the `FB_HEIGHT` and `FB_WIDTH` constants match the resolution shown in the command output (`mode "1920x1080"`). Next, ensure the `FB_DEPTH` contant matches the depth shown from the command output (last number in the line: `geometry 1920 1080 1920 1080 16`).
+Ensure the `FB_HEIGHT` and `FB_WIDTH` constants match the resolution shown in the command output (`mode "1920x1080"`). Next, ensure the `FB_DEPTH` constant matches the depth shown from the command output (the last number in the line is `geometry 1920 1080 1920 1080 16`).
 
 ### Starting the script and controls
 Run the script with `python app.py`.
@@ -58,7 +58,7 @@ The `r` key toggles the recording: press to start the recording, and again to en
 The `e` key exits the script, if a recording was in progress when this key is pressed, the recording is gracefully stopped and the file is saved.
 
 ### Moving the recording file to another computer
-I've been using the secure copy protocol (SCP) to copy the recording files from the Pi to my personal machine.
+I've been using the secure copy protocol (SCP) to copy the recording files from the Pi to my machine.
 
 From the Pi, after cd'ing to the directory with the recording:
 
@@ -72,7 +72,7 @@ For example:
 scp recording_03-05-2024-14-39-33.mjpg sid@192.168.0.1:/Users/sid/Desktop
 ```
 
-Note: You must have a running SSH daemon/service on the recipient computer.
+Note: You must have an active SSH daemon/service on the recipient's computer.
 
 ## Bugs and WIP
 ### Bug: Program fails to launch: no Qt platform plugin could be initialized
@@ -88,4 +88,5 @@ Available platform plugins are: eglfs, linuxfb, minimal, minimalegl, offscreen, 
 
 Aborted
 ```
+
 I'm not exactly sure what is causing this, and I haven't had any time to debug it. However, a simple fix is to log out, then log back in, after which the program should launch perfectly.
