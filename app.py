@@ -1,138 +1,64 @@
-import cv2 as cv
-import numpy as np
-from picamera2 import Picamera2
-from picamera2.encoders import JpegEncoder
-from datetime import datetime
+""" Records video from a Raspberry Pi Camera. """
 
-# Width and height of the recording
-REC_WIDTH = 840
-REC_HEIGHT = 640
+from ProjectorManager import Projector
+from CameraManager import Camera
+from PreviewManager import Preview
 
-# Width, height of the framebuffer
+# Recording parameters
+REC_FPS = 30            # Max available framerate is 60 FPS
+REC_WIDTH = 728         # Set to half of full sensor width
+REC_HEIGHT = 544        # Set to half of full sensor height
+
+# Framebuffer parameters
 FB_WIDTH = 1920
 FB_HEIGHT = 1080
 FB_DEPTH = 16
 
-# initialise picam2
-picam = Picamera2()
+if __name__ == "__main__":
+    # Create preview window instance
+    preview = Preview()
 
-# configure picam2
-config = picam.create_video_configuration(
-    main={"size": (REC_WIDTH, REC_HEIGHT)},
-)
-picam.configure(config)
+    # Initialise framebuffer - reset fb with light source off
+    light = Projector(FB_WIDTH, FB_HEIGHT, FB_DEPTH, False)
 
-# window to display recording feed (view from X11)
-cv.namedWindow("PiCam Feed")
-
-# some status variables
-recording = False
-light = False
-
-# initialise framebuffer outputs
-project_off = np.full(
-    (FB_HEIGHT, FB_WIDTH),  # fill into array of this size
-    0,                      # fill array with this value (black/off = 0)
-    dtype=np.uint16
-).reshape(-1)               # flatten to 1d array for writing to framebuffer
-project_on = np.full(
-    (FB_HEIGHT, FB_WIDTH),  # fill into array of this size
-    (2 ** FB_DEPTH - 1),    # Maximum value for given colour depth (white)
-    dtype=np.uint16
-).reshape(-1)               # flatten to 1d array for writing to framebuffer
-
-# project zeros (black) to the framebuffer to reset output
-with open('/dev/fb0', 'wb') as buf:
-    buf.write(project_off.tobytes())
-
-# initialise JPEG encoder with quality = 100
-encoder = JpegEncoder(q=100)
-
-# start the picam
-picam.start()
-
-while True:
-    # capture a frame from the picam
-    frame = picam.capture_array()
-    # clone to overlay text
-    frame_overlay = frame.copy()
-
-    # detect a key press
-    key = cv.waitKey(1)
-
-    # exit if 'e' key is pressed
-    if key == ord('e'):
-        # refuse to exit if a video is being recorded
-        if recording:
-            frame_overlay = cv.putText(
-                img=frame_overlay,
-                text="     CANNOT EXIT: REC IN PROGRESS!",
-                org=(10, 50),
-                fontFace=cv.FONT_HERSHEY_SIMPLEX,
-                fontScale=1,
-                color=(0,0,255),
-                thickness=2,
-                lineType=cv.LINE_AA
-            )
-        else:
-            # stop the picam
-            picam.stop()
-            # break out of while loop
-            break
-
-    # toggle recording if 'r' pressed
-    if key == ord('r'):
-        if recording:
-            recording = False
-            picam.stop_recording()  # stop the recording
-            recording_stop = datetime.now().strftime("%m-%d-%Y-%H-%M-%S")
-            print("Recording stopped:", recording_stop)
-            # picam needs to be restarted because stop_recording completely stops the preview
-            picam.stop()
-            picam.start()
-        else:
-            recording = True
-            recording_start = datetime.now().strftime("%m-%d-%Y-%H-%M-%S")
-            filename = "recording_" + recording_start + ".mjpg"
-            print("Started recording to:", filename)
-            # use picam recording function with the right encoder
-            picam.start_recording(
-                encoder=encoder,
-                output=filename,
-            )
-
-    # toggle light when 'l' pressed
-    if key == ord('l'):
-        if light:
-            # turn off light if already on
-            light = False
-            with open('/dev/fb0', 'wb') as buf:
-                buf.write(project_off.tobytes())
-        else:
-            # turn on light if already off
-            light = True
-            with open('/dev/fb0', 'wb') as buf:
-                buf.write(project_on.tobytes())
-
-    # add text overlay to gui frame if recording
-    if recording:
-        frame_overlay = cv.putText(
-            img=frame_overlay,
-            text="REC",
-            org=(10, 50),
-            fontFace=cv.FONT_HERSHEY_SIMPLEX,
-            fontScale=1,
-            color=(255,0,0),
-            thickness=2,
-            lineType=cv.LINE_AA
+    # Initialise Pi camera
+    camera = Camera(REC_WIDTH, REC_HEIGHT, REC_FPS)
+    
+    # This is the main runtime loop
+    while True:
+        # Retrieve a frame from the Pi camera for the preview window
+        preview.showFrame(
+            camera.captureFrame(),
+            camera.getStatus(),
+            light.getStatus()
         )
 
-    # show the GUI frame
-    cv.imshow("PiCam Feed", frame_overlay)
+        # Read key press
+        keypress = preview.getKeypress()
 
-# when exiting, destroy all GUI windows
-cv.destroyAllWindows()
+        # Toggle light when 'l' key is pressed
+        if keypress == ord('l'):
+            light.toggle()
 
-# when exiting, reset framebuffer with zero array
-with open('/dev/fb0', 'wb') as buf:
-    buf.write(project_off.tobytes())
+
+        # Toggle recording when 'r' key is pressed
+        if keypress == ord('r'):
+            camera.toggleRecording()
+
+
+        # Exit program when 'e' key is pressed
+        if keypress == ord('e'):
+            # Send shutdown request to camera instance
+            camera.shutdown()
+
+            # When exiting, reset framebuffer with zero array
+            light.off()
+
+            # Send shutdown request to preview instance
+            preview.shutdown()
+
+            # Exit
+            break
+    
+    # Exit from the script
+    exit()
