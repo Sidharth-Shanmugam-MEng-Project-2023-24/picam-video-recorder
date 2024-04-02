@@ -1,4 +1,4 @@
-# webcam-video-recorder
+# picam-video-recorder
 Python script to record video from a Raspberry Pi Camera stream to a file, simultaneously driving a projector light source using the Framebuffer
 
 The aim of this software is to record test footage of bubbles from the underwater testing facility at the [Institute for Safe Autonomy](https://www.york.ac.uk/safe-autonomy/). The software drives a DLP projector, connected via HDMI and using the Framebuffer to eliminate the need for a desktop environment, to power a toggle-able light source. Footage is recorded from a Raspberry Pi Global Shutter camera.
@@ -7,15 +7,29 @@ The aim of this software is to record test footage of bubbles from the underwate
 1. Connect GS camera to Pi using the MIPI interface.
 2. Connect DLP projector to either of the Pi's HDMI ports.
 3. Connect Pi to Desktop/Laptop via Ethernet.
-4. SSH into Pi with X11 forwarding (`ssh -X sid@sidpi4.local`).
+4. SSH into Pi with X11 forwarding (e.g., `ssh -X sid@sidpi4.local`).
 
 ## Usage
 The [Picamera2](https://github.com/raspberrypi/picamera2) library, although only available as a beta release at the time of writing, is a Python interface to provide high-level access to the Raspberry Pi Cameras and Pi computer's built-in imaging hardware. [OpenCV](https://opencv.org) is a computer vision library which provides a simple-to-use, high-level GUI framework.
 
 This Python script utilises the Picamera2 library to initialise the attached Raspberry Pi Global Shutter camera with recording parameters, then, in an infinite while-loop, captures a frame from the GS camera to display as a preview to a window using OpenCV, with text-based status message overlays. Recording footage is possible using the record function and a video encoder implementation from the Picamera2 library.
 
+From the Picamera2 documentation, the camera module sends the captured data to the CSI-2 Receiver on-board the Pi, which will buffer the data to memory. At this point, the data is unprocessed and a direct (Bayer) output from the sensor. The 'raw' stream allows for this data to be read, however, vast amounts of pre-processing is required before this data is human-understandable. From the memory module, the data then moves to an 'Image Signal Processor' (ISP) module, again, on-board the Pi, which processes the raw stream into a human parseable, such as BGR888. Unless a specific type of encoding is requested in code, this data stays un-encoded, thus 'raw', and passed to the 'main' stream. A 'lores' stream exists as a low resolution stream, but is not required for this program.
+
+```
+Camera Module 
+    |--> CSI-2 Rx. 
+            |--> Mem 
+                  |--> ISP
+                  |     |--> 'main' stream
+                  |     |--> 'lores' stream
+                  |--------> 'raw' stream
+```
+
+Since the 'Image Signal Processor' efficiently processes this 'raw' stream into a human-understandable format, this software records the 'main' stream, which is the 'raw' stream converted into BGR888 from the sensor-specific format by the ISP, to a memory buffer. When the recording finishes, the memory buffered data is moved to the disk, then passed into the FFmpeg software to convert into a video file format (MKV) using a lossless encoder (FFV1) so that the output file can be opened by a general-purpose video playback software such as VLC and the file size of the recording is reduced.
+
 ### Parameters 1: Recording resolution
-The resolution to record in is controlled by the `REC_WIDTH` and `REC_HEIGHT` constants. By default: `REC_WIDTH=840` and `REC_HEIGHT=640`.
+The resolution and framerate to record with is controlled by the `REC_WIDTH`, `REC_HEIGHT`, and `REC_FPS` constants. By default: `REC_WIDTH=728`, `REC_HEIGHT=544`, and `REC_FPS=30` which is half of the full resolution and half of the max framerate of the sensor.
 
 The values stored in this constant is passed to Picamera2's `create_video_configuration()` and `configure()` functions, which initialises the GS camera for video recording.
 
@@ -39,9 +53,9 @@ Run the script with `python app.py`.
 
 The `l` key toggles the light source: when the light is toggled on, the script writes an array of the value for 'white' to the Framebuffer. When the light is toggled off, the script writes an array of 'black'.
 
-The `r` key toggles the recording: press to start the recording, and again to end the recording. The file is saved in the format: `recording_%m-%d-%Y-%H-%M-%S.mjpg`.
+The `r` key toggles the recording: press to start the recording, and again to end the recording. The file is saved in the format: `recording_%m-%d-%Y-%H-%M-%S.mkv`.
 
-The `e` key exits the script as long as it isn't recording, otherwise, the recording must be stopped with the `r` key before the `e` key has any effect.
+The `e` key exits the script, if a recording was in progress when this key is pressed, the recording is gracefully stopped and the file is saved.
 
 ### Moving the recording file to another computer
 I've been using the secure copy protocol (SCP) to copy the recording files from the Pi to my personal machine.
@@ -62,31 +76,16 @@ Note: You must have a running SSH daemon/service on the recipient computer.
 
 ## Bugs and WIP
 ### Bug: Program fails to launch: no Qt platform plugin could be initialized
-Occasionally, when launching the script, you may result in this error message:
+Occasionally, when launching the script, you may encounter this error message:
 
 ```
-sid@sidpi4:~/picam-video-recorder $ python app.py 
-[2:41:37.021666797] [3809]  INFO Camera camera_manager.cpp:284 libcamera v0.2.0+46-075b54d5
-[2:41:37.061594176] [3847]  WARN RPiSdn sdn.cpp:39 Using legacy SDN tuning - please consider moving SDN inside rpi.denoise
-[2:41:37.063347788] [3847]  INFO RPI vc4.cpp:447 Registered camera /base/soc/i2c0mux/i2c@1/imx296@1a to Unicam device /dev/media4 and ISP device /dev/media0
-[2:41:37.063407342] [3847]  INFO RPI pipeline_base.cpp:1144 Using configuration file '/usr/share/libcamera/pipeline/rpi/vc4/rpi_apps.yaml'
-[2:41:37.066034084] [3809]  INFO Camera camera_manager.cpp:284 libcamera v0.2.0+46-075b54d5
-[2:41:37.089617559] [3850]  WARN RPiSdn sdn.cpp:39 Using legacy SDN tuning - please consider moving SDN inside rpi.denoise
-[2:41:37.091225119] [3850]  INFO RPI vc4.cpp:447 Registered camera /base/soc/i2c0mux/i2c@1/imx296@1a to Unicam device /dev/media4 and ISP device /dev/media0
-[2:41:37.091326543] [3850]  INFO RPI pipeline_base.cpp:1144 Using configuration file '/usr/share/libcamera/pipeline/rpi/vc4/rpi_apps.yaml'
-[2:41:37.097325085] [3809]  INFO Camera camera.cpp:1183 configuring streams: (0) 840x640-XBGR8888 (1) 1456x1088-SBGGR10_CSI2P
-[2:41:37.097725151] [3850]  INFO RPI vc4.cpp:611 Sensor: /base/soc/i2c0mux/i2c@1/imx296@1a - Selected sensor format: 1456x1088-SBGGR10_1X10 - Selected unicam format: 1456x1088-pBAA
-qt.qpa.xcb: could not connect to display localhost:10.0
-qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "/home/sid/.local/lib/python3.11/site-packages/cv2/qt/plugins" even though it was found.
+sid@sidpi5:~/picam-video-recorder $ python app.py 
+qt.qpa.xcb: could not connect to display localhost:12.0
+qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "" even though it was found.
 This application failed to start because no Qt platform plugin could be initialized. Reinstalling the application may fix this problem.
 
-Available platform plugins are: xcb.
+Available platform plugins are: eglfs, linuxfb, minimal, minimalegl, offscreen, vnc, wayland-egl, wayland, wayland-xcomposite-egl, wayland-xcomposite-glx, xcb.
 
 Aborted
 ```
 I'm not exactly sure what is causing this, and I haven't had any time to debug it. However, a simple fix is to log out, then log back in, after which the program should launch perfectly.
-
-### WIP: Recording footage in raw format
-An earlier commit of `app.py` had a *working* implementation of raw format video recording. The script was generating a .raw file, which, however, I was unable to figure out how to open. I understand this is a binary file but I am unsure as to how the file is formatted. I will be researching how to parse this raw format and will later re-implement this feature.
-
-For now, I've fallen back to a fully-working solution with the `JpegEncoder` and quality set to 100. The output file, although unable to open in VLC or QuickTime, does open in [mpv](https://mpv.io).
