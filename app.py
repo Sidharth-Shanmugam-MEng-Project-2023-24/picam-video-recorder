@@ -11,12 +11,14 @@ from PreviewManager import Preview
 REC_FPS = 30            # Max available framerate is 60 FPS
 REC_WIDTH = 728         # Set to half of full sensor width
 REC_HEIGHT = 544        # Set to half of full sensor height
-REC_CROP_HEIGHT = (0, 320)
-REC_CROP_WIDTH = (430, 700)
+REC_CROP_HEIGHT = (None, None)
+REC_CROP_WIDTH = (None, None)
+# REC_CROP_HEIGHT = (0, 320)
+# REC_CROP_WIDTH = (430, 700)
 
 # Framebuffer parameters
-FB_WIDTH = 1920
-FB_HEIGHT = 1080
+FB_WIDTH = 1280
+FB_HEIGHT = 800
 FB_DEPTH = 16
 
 if __name__ == "__main__":
@@ -74,6 +76,7 @@ if __name__ == "__main__":
 
         # Measure mode when 'm' key is pressed
         if keypress == ord('m'):
+            light.off()
             plt.imshow(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), origin='upper')
             plt.show()
     
