@@ -1,3 +1,4 @@
+import numpy as np
 import cv2 as cv
 
 class Preview:
@@ -23,7 +24,7 @@ class Preview:
 
 
 
-    def showFrame(self, frame, recording, light):
+    def showFrame(self, frame, calibrate, recording, light):
         """ Updates the window with the new frame, adds status text overlays. """
 
         # Generate a text-based status for the light source
@@ -41,11 +42,13 @@ class Preview:
                 recording_status = ""
 
         # Add the two status text together
-        overlay_text = light_status + "    " + recording_status
+        overlay_text = light_status + "    " + calibrate + "    " + recording_status
+
+        frame_overlay = np.copy(frame)
 
         # Overlay the text to the frame
         frame_overlay = cv.putText(
-            img=frame,
+            img=frame_overlay,
             text=overlay_text,
             org=(10, 25),
             fontFace=cv.FONT_HERSHEY_SIMPLEX,
@@ -56,4 +59,4 @@ class Preview:
         )
 
         # Render the frame
-        cv.imshow("Pi Camera Feed", frame)
+        cv.imshow("Pi Camera Feed", frame_overlay)

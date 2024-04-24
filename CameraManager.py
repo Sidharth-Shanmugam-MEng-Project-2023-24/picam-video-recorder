@@ -12,7 +12,7 @@ class Camera:
     This interface will record and capture the 'main' stream which is set up as the processed 'raw' feed.
     """
 
-    def __init__(self, width, height, rate):
+    def __init__(self, width, height, rate, crop_w, crop_h):
 
         # Initialise Pi camera instance
         self.picam2 = Picamera2()
@@ -43,6 +43,10 @@ class Camera:
         self.recording_start_ts = None
         self.recording_stop_ts = None
 
+        # Initialise cropping parameters
+        self.crop_w = crop_w
+        self.crop_h = crop_h
+
 
 
 
@@ -55,7 +59,10 @@ class Camera:
     
     def captureFrame(self):
         """ Capture a frame from the camera for constructing a frame-by-frame preview feed. """
-        return self.picam2.capture_array("main")
+        frame = self.picam2.capture_array("main")
+        if (self.crop_w is not None) and (self.crop_h is not None):
+            frame = frame[self.crop_h[0]:self.crop_h[1], self.crop_w[0]:self.crop_w[1]]
+        return frame
             
 
 
